@@ -62,6 +62,8 @@ public class HttpsProperties extends HttpProperties
 	 */
 	private static final long serialVersionUID = -8977063312750602786L;
 
+	public static final String PROP_CERTALIAS = "certAlias";
+
 	/**
 	 *  Constructor
 	 */
@@ -260,5 +262,17 @@ public class HttpsProperties extends HttpProperties
 	public String getHostnameVerifier()
 	{
 		return getProperty( "hostnameVerifier", null );
+	}
+
+	/**
+	 * Set the CertAlias to use for the SSL connector.
+	 * @return
+     */
+	public String getCertAlias() {
+		return getProperty( PROP_CERTALIAS, null );
+	}
+
+	public void setCertAlias( String alias ) {
+		setProperty( PROP_CERTALIAS, alias  );
 	}
 }

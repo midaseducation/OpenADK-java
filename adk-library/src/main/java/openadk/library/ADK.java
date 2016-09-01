@@ -177,7 +177,7 @@ public class ADK {
 	public static int debug = DBG_VERY_DETAILED;
 
 	// This array must be in order from earliest to latest version
-	private static final SIFVersion[] sSupportedVersionsArray = { SIFVersion.SIF11, SIFVersion.SIF15r1, SIFVersion.SIF20, SIFVersion.SIF20r1, SIFVersion.SIF21, SIFVersion.SIF22, SIFVersion.SIF23, SIFVersion.SIF24, SIFVersion.SIF25, SIFVersion.SIF26 };
+	private static final SIFVersion[] sSupportedVersionsArray = { SIFVersion.SIF11, SIFVersion.SIF15r1, SIFVersion.SIF20, SIFVersion.SIF20r1, SIFVersion.SIF21, SIFVersion.SIF22, SIFVersion.SIF23, SIFVersion.SIF24, SIFVersion.SIF25, SIFVersion.SIF26, SIFVersion.SIF27 };
 
 	/**
 	 * The root log Category. Subcategories exist for the Agent and each zone,

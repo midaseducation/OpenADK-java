@@ -1,0 +1,6 @@
+openadk/openadk-library/1.0.1-SNAPSHOT/openadk-library-1.0.1-SNAPSHOT.jar=openadk:openadk-library:1.0.1-SNAPSHOT:n/a:jar:jar:openadk-library-1.0.1-SNAPSHOT.pom:n/a:nexus:http://nexus.midaseducation.net/repository/midas-snapshots/
+openadk/openadk-library/1.0.1-SNAPSHOT/openadk-library-1.0.1-SNAPSHOT-US.jar=openadk:openadk-library:1.0.1-SNAPSHOT:US:jar:jar:n/a:n/a:nexus:http://nexus.midaseducation.net/repository/midas-snapshots/
+openadk/openadk-library/1.0.1-SNAPSHOT/openadk-library-1.0.1-SNAPSHOT-sources.jar=openadk:openadk-library:1.0.1-SNAPSHOT:sources:java-source:jar:n/a:n/a:nexus:http://nexus.midaseducation.net/repository/midas-snapshots/
+openadk/openadk-library/1.0.1-SNAPSHOT/openadk-library-1.0.1-SNAPSHOT.jar=openadk:openadk-library:1.0.1-SNAPSHOT:n/a:jar:jar:openadk-library-1.0.1-SNAPSHOT.pom:n/a:nexus:http://nexus.midaseducation.net/repository/maven-snapshots/
+openadk/openadk-library/1.0.1-SNAPSHOT/openadk-library-1.0.1-SNAPSHOT-US.jar=openadk:openadk-library:1.0.1-SNAPSHOT:US:jar:jar:n/a:n/a:nexus:http://nexus.midaseducation.net/repository/maven-snapshots/
+openadk/openadk-library/1.0.1-SNAPSHOT/openadk-library-1.0.1-SNAPSHOT-sources.jar=openadk:openadk-library:1.0.1-SNAPSHOT:sources:java-source:jar:n/a:n/a:nexus:http://nexus.midaseducation.net/repository/maven-snapshots/

@@ -69,10 +69,12 @@ public class SIFVersion implements Serializable, Comparable<SIFVersion>
 	/** Identifies the SIF 2.6 Specification */
 	public static final SIFVersion SIF26 = new SIFVersion( 2, 6, 0 );
 
+	public static final SIFVersion SIF27 = new SIFVersion( 2, 7, 0 );
+
 //// WARNING: MAKE SURE TO UPDATE THE GETINSTANCE METHOD WHEN ADDING NEW VERSIONS ////
 
 	/** Identifies the latest SIF Specification supported by the SIFWorks ADK */
-	public static final SIFVersion LATEST = SIF26;
+	public static final SIFVersion LATEST = SIF27;
 
 	/**
 	 *	Constructs a version object
@@ -127,6 +129,8 @@ public class SIFVersion implements Serializable, Comparable<SIFVersion>
 					return SIF25;
 				} else if( minor == 6 ) {
 					return SIF26;
+				} else if( minor == 7 ) {
+					return SIF27;
 				}
 			}
 		} else if( major == 1 ) {

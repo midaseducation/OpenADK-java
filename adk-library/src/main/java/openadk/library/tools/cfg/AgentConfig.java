@@ -6,6 +6,7 @@
 package openadk.library.tools.cfg;
 
 import java.io.*;
+import java.net.URL;
 import java.util.List;
 import java.util.Properties;
 import java.util.Vector;
@@ -176,6 +177,9 @@ public class AgentConfig
 	{
 		if( !ADK.isInitialized() )
 			throw new ADKException( "ADK is not initialized",null );
+
+
+
 
 		String fileName = JUnitHelper.fixPathSeparator(file);
 		fSrc = new File(fileName);

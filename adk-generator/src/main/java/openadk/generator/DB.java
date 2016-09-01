@@ -117,9 +117,9 @@ public class DB
 						keyCmp2s.append('+');
 				}
 
-				if( !keyCmp1s.toString().equals(keyCmp2s.toString()) )
-					throw new MergeException("\""+key+"\" target and source have different key signature; merge not yet supported by adkgen." +
-					" Target=\"" + keyCmp2s.toString() + "\"; Source=\"" + keyCmp1s.toString() + "\"" );
+				//if( !keyCmp1s.toString().equals(keyCmp2s.toString()) )
+				//	throw new MergeException("\""+key+"\" target and source have different key signature; merge not " +
+				//	"yet supported by adkgen." + " Target=\"" + keyCmp2s.toString() + "\"; Source=\"" + keyCmp1s.toString() + "\"" );
 
 				mergeTargetObjectDef.setLatestVersion( getVersion() );
 				

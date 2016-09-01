@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="maven-antrun-" default="main"  >
+<target name="main">
+  <property name="project.dir" value="/Users/ajbrown/Projects/midas/OpenADK-java/adk-library/target"/>
+  <ant dir="../adk-generator">
+    <target name="US"/>
+  </ant>
+</target>
+</project>

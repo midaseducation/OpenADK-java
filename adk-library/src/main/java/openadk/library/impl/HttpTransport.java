@@ -5,40 +5,41 @@
 
 package openadk.library.impl;
 
-
-import openadk.library.*;
-import openadk.library.common.*;
-import openadk.library.infra.*;
+import openadk.library.ADK;
+import openadk.library.ADKTransportException;
+import openadk.library.Agent;
+import openadk.library.AgentMessagingMode;
+import openadk.library.AgentProperties;
+import openadk.library.HttpProperties;
+import openadk.library.HttpsProperties;
+import openadk.library.IProtocolHandler;
+import openadk.library.SIFVersion;
+import openadk.library.Zone;
+import openadk.library.common.YesNo;
+import openadk.library.infra.SIF_Property;
+import openadk.library.infra.SIF_Protocol;
 import openadk.library.threadpool.ThreadPoolManager;
-
-import org.eclipse.jetty.http.*;
-import org.eclipse.jetty.http.ssl.SslContextFactory;
-import org.eclipse.jetty.server.Connector;
-import org.eclipse.jetty.server.Handler;
-import org.eclipse.jetty.server.NCSARequestLog;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.bio.SocketConnector;
-import org.eclipse.jetty.server.handler.ContextHandlerCollection;
-import org.eclipse.jetty.server.handler.DefaultHandler;
-import org.eclipse.jetty.server.handler.HandlerCollection;
-import org.eclipse.jetty.server.handler.RequestLogHandler;
-import org.eclipse.jetty.server.ssl.SslSocketConnector;
-import org.eclipse.jetty.util.*;
-import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.eclipse.jetty.util.thread.ThreadPool;
-import org.eclipse.jetty.util.MultiException;
-
-
 import org.apache.log4j.Category;
 import org.apache.log4j.Logger;
+import org.eclipse.jetty.http.HttpVersion;
+import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.NCSARequestLog;
+import org.eclipse.jetty.server.SecureRequestCustomizer;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.server.handler.ContextHandlerCollection;
+import org.eclipse.jetty.server.handler.HandlerCollection;
+import org.eclipse.jetty.server.handler.RequestLogHandler;
+import org.eclipse.jetty.util.MultiException;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-
-import javax.net.ssl.SSLServerSocket;
 
 /**
  * Transport class for the HTTP and HTTPS protocols.
@@ -163,8 +164,7 @@ public class HttpTransport extends TransportImpl {
             }
             if (sServer == null) {
                 try {
-                    sServer = new org.eclipse.jetty.server.Server();
-                    sServer.setThreadPool(new QueuedThreadPool(poolSize));
+                    sServer = new org.eclipse.jetty.server.Server( new QueuedThreadPool(poolSize) );
                     //HandlerCollection handlers = new HandlerCollection();
                     //handlers.addHandler(new ContextHandlerCollection());
                     sServer.setHandler(new ContextHandlerCollection());
@@ -295,8 +295,8 @@ public class HttpTransport extends TransportImpl {
 				int port = getPort();
 				Connector[] listeners = sServer.getConnectors();
 				for (int i = 0; i < listeners.length; i++) {
-					if (listeners[i] instanceof SocketConnector
-							&& listeners[i].getPort() == port) {
+					if (listeners[i] instanceof ServerConnector
+							&& ((ServerConnector)listeners[i]).getPort() == port) {
 						sServer.removeConnector(listeners[i]);
 						break;
 					}
@@ -318,7 +318,7 @@ public class HttpTransport extends TransportImpl {
 	 */
 	protected void configureServer(Zone zone) throws ADKTransportException {
 		
-		SocketConnector newListener = null;
+		ServerConnector newListener = null;
 		if (fProps.getProtocol().equalsIgnoreCase("http")){
 			newListener = configureHttp(zone);
 		} else if (fProps.getProtocol().equalsIgnoreCase("https")){
@@ -334,49 +334,13 @@ public class HttpTransport extends TransportImpl {
 /*			try
 			{
 				newListener.start();
-                newListener.open();
+                newListener.open();profiles
 			}
 			catch( Exception le ){
 				ADKUtils._throw( new ADKTransportException( "Error starting SocketListener: " + le.getMessage(), zone, le ), log );
 			}
 */			
-			if( fProps.getProtocol().equalsIgnoreCase("https") ){
-				
-				String allowedCiphers = fProps.getProperty( "ciphers" );
-				if( allowedCiphers != null && allowedCiphers.length() > 0 ){
-					
-					log.debug( "Setting the set of allowed ciphers to " + allowedCiphers );
-					String[] allowed = allowedCiphers.split( "," );
-					
-					SslSocketConnector jsse = (SslSocketConnector)newListener;
-					
-					List<String> ciphers = new ArrayList<String>();
-					for( String cipher : jsse.getSslContextFactory().getIncludeCipherSuites()){
-						if( Arrays.binarySearch( allowed, cipher ) < 0 ) {
-							log.debug( "Disabling cipher: " + cipher );
-						}else {
-							log.debug( "Enabling cipher: " + cipher );
-							ciphers.add( cipher );
-						}
-					}
-					
-					String[] enabled = new String[ ciphers.size() ];
-					ciphers.toArray( enabled );
-					jsse.getSslContextFactory().setIncludeCipherSuites(enabled);
-					
-	//				for( String pro : socket.getEnabledProtocols() ){
-	//					System.out.println( pro );
-	//				}
-	//				
-					for( String cipher : jsse.getSslContextFactory().getIncludeCipherSuites() ){
-						log.debug( cipher + " is enabled for this session." );
-					}
-				
-				}
-				
-				
-			}
-			
+
 		}
 	}
 
@@ -386,7 +350,7 @@ public class HttpTransport extends TransportImpl {
 	 * @return The SocketListener that was configured, or null
 	 * @throws ADKTransportException
 	 */
-	protected SocketConnector configureHttp(Zone zone) throws ADKTransportException {
+	protected ServerConnector configureHttp(Zone zone) throws ADKTransportException {
 		int port = getPort();
 		if (port == -1)
 			throw new ADKTransportException(
@@ -395,19 +359,8 @@ public class HttpTransport extends TransportImpl {
 
 		String optHost = getHost();
 
-		// If there is no SocketListener on this port, create one
-		Connector listener = null;
-		Connector[] listeners = sServer.getConnectors();
-        if (listeners != null) {
-            for (int i = 0; i < listeners.length; i++) {
-                if (listeners[i] instanceof SocketConnector
-                        && listeners[i].getPort() == port) {
-                    if (optHost != null	&& listeners[i].getHost().equalsIgnoreCase(optHost))
-                        listener = listeners[i];
-                }
-            }
-        }
-
+		// If there is no ServerConnector on this port, create one
+		ServerConnector listener = findExistingConnector( optHost, port );
 
 		if (listener == null) {
 			if ((ADK.debug & ADK.DBG_TRANSPORT) != 0 && log.isInfoEnabled()) {
@@ -420,7 +373,7 @@ public class HttpTransport extends TransportImpl {
 				}
 			}
 
-			SocketConnector http = new SocketConnector();
+			ServerConnector http = new ServerConnector( sServer );
 			configureSocketListener(http, port, optHost);
 			return http;
 		} else {
@@ -437,6 +390,29 @@ public class HttpTransport extends TransportImpl {
 	}
 
 	/**
+	 * Find a ServerConnector that's already running on a host and port.
+	 * @param host
+	 * @param port
+     * @return
+     */
+	private ServerConnector findExistingConnector( String host, int port ) {
+		ServerConnector listener = null;
+		Connector[] listeners = sServer.getConnectors();
+		if (listeners != null) {
+			for ( Connector l : listeners ) {
+				if ( l instanceof ServerConnector ) {
+					ServerConnector l2 = (ServerConnector) l;
+					if ( host != null && l2.getPort() == port && l2.getHost().equalsIgnoreCase( host ) ) {
+						listener = l2;
+					}
+				}
+			}
+		}
+
+		return listener;
+	}
+
+	/**
 	 * Configure the Jetty server for HTTPS as needed based on the settings of
 	 * this Transport object. If the server does not have a JSSEListener on the
 	 * port specified for this transport, one is created. Jetty configuration is
@@ -445,7 +421,7 @@ public class HttpTransport extends TransportImpl {
 	 * needed.
 	 * @return A SocketListener if a new one was created, or null
 	 */
-	protected SocketConnector configureHttps(Zone zone) throws ADKTransportException {
+	protected ServerConnector configureHttps(Zone zone) throws ADKTransportException {
 		int port = getPort();
 		if (port == -1) {
 			throw new ADKTransportException(
@@ -456,93 +432,31 @@ public class HttpTransport extends TransportImpl {
 		String optHost = getHost();
 
 		// If there is no SunJsseListener on this port, create one
-		Connector listener = null;
-		Connector[] listeners = sServer.getConnectors();
-		for (int i = 0; i < listeners.length; i++) {
-			if (listeners[i] instanceof SocketConnector
-					&& listeners[i].getPort() == port) {
-				if (optHost != null	&& listeners[i].getHost().equalsIgnoreCase(optHost))
-					listener = listeners[i];
-			}
-		}
+		ServerConnector listener = findExistingConnector( optHost, port );
 
 		if (listener == null) {
 			try {
-				String ks = getKeyStore();
-				String ksPwd = getKeyStorePassword();
 
 				if ((ADK.debug & ADK.DBG_TRANSPORT) != 0 && log.isInfoEnabled()) {
-					if (optHost == null) {
+					if ( optHost == null ) {
 						log
-								.info("Creating HTTPS listener for push mode on port "
-										+ port);
+								.info( "Creating HTTPS listener for push mode on port "
+										+ port );
 					} else {
-						log.info("Creating HTTPS listener for push mode on "
-								+ optHost + ":" + port);
+						log.info( "Creating HTTPS listener for push mode on "
+								+ optHost + ":" + port );
 					}
-
-					if (ks == null) {
-						log.info("Using default Java keystore");
-					} else {
-						log.info("Using keystore: " + ks);
-					}
-
-					if (ksPwd.equals("changeit"))
-						log
-								.info("Using default Java keystore password 'changeit'");
-
-					if (fProps instanceof HttpsProperties)
-						log
-								.info("Requiring client authentication: "
-										+ (((HttpsProperties) fProps)
-												.getRequireClientAuth() ? "yes"
-												: "no"));
 				}
 
-				final SslSocketConnector https = new SslSocketConnector();
+				final SslConnectionFactory sslConnFactory = createSslConnectionFactory( zone );
+				final HttpConfiguration httpsConf = buildHttpConfiguration();
+				httpsConf.setSecurePort( port );
+				httpsConf.setSecureScheme( "https" );
+				httpsConf.addCustomizer( new SecureRequestCustomizer() );
+
+				final ServerConnector https = new ServerConnector(sServer, sslConnFactory, new HttpConnectionFactory( httpsConf ));
                 configureSocketListener(https, port, optHost);
-                final SslContextFactory httpsContext = https.getSslContextFactory();
 
-				if (ks != null)
-                    httpsContext.setKeyStore(ks);
-                httpsContext.setKeyManagerPassword(ksPwd);
-				String pwd = getPassword();
-				if (pwd == null) {
-                    httpsContext.setKeyStorePassword(ksPwd);
-				} else {
-                    httpsContext.setKeyStorePassword(pwd);
-				}
-
-				HttpsProperties httpsProps = (HttpsProperties) fProps;
-				String ts = httpsProps.getTrustStore();
-				String tsPwd = httpsProps.getTrustStorePassword();
-				if (tsPwd == null)
-					tsPwd = "changeit";
-
-				if (ts != null) {
-					File tsFile = new File(ts);
-					if (!tsFile.exists())
-						throw new ADKTransportException(
-								"Truststore file not found: "
-										+ tsFile.getAbsolutePath(), zone);
-					log.info("(HttpTransport) Using truststore: "
-							+ tsFile.getAbsolutePath());
-					System.setProperty("javax.net.ssl.trustStore", ts);
-					System.setProperty("javax.net.ssl.trustStorePassword",
-							tsPwd);
-				} else {
-					log.info("Using default Java truststore");
-				}
-				// The following property tells the SunJsseListener to 
-				// use a seperate truststore from the keystore. Note that if
-				// the truststore file is set above, it will be used, rather
-				// than the 'default' java truststore
-				//https.setUseDefaultTrustStore(true);
-
-				if (fProps instanceof HttpsProperties) {
-					httpsContext.setNeedClientAuth(((HttpsProperties) fProps)
-							.getRequireClientAuth());
-				}
 				return https;
 				
 			} catch (Exception ioe) {
@@ -562,6 +476,18 @@ public class HttpTransport extends TransportImpl {
 		return null;
 	}
 
+	private HttpConfiguration buildHttpConfiguration() {
+		HttpConfiguration http_config = new HttpConfiguration();
+		http_config.setSecureScheme("https");
+		http_config.setOutputBufferSize(32768);
+		http_config.setRequestHeaderSize(8192);
+		http_config.setResponseHeaderSize(8192);
+		http_config.setSendServerVersion(true);
+		http_config.setSendDateHeader(true);
+
+		return http_config;
+	}
+
 	/**
 	 * Configures common settings for the Http Listener
 	 * 
@@ -569,65 +495,114 @@ public class HttpTransport extends TransportImpl {
 	 * @param port
 	 * @param hostName
 	 */
-	private void configureSocketListener(SocketConnector listener, int port,
-			String hostName) {
+	private void configureSocketListener(final ServerConnector listener, int port, String hostName) {
 
         listener.setName("ADK HTTP Listener");
 		listener.setPort(port);
 		if (hostName != null) {
 			try {
+				log.info( "Attempting to set hostname: " + hostName );
 				listener.setHost(hostName);
 			} catch (Exception uhe) {
 				log.warn("Could not change the local socket address to '"
 						+ hostName + "': " + uhe, uhe);
 			}
 		}
+	}
 
-        QueuedThreadPool threadPool = new QueuedThreadPool(8);
+	private SslConnectionFactory createSslConnectionFactory( Zone zone ) throws ADKTransportException {
+		String ks = getKeyStore();
+		String ksPwd = getKeyStorePassword();
+		HttpsProperties httpsProps = (HttpsProperties) fProps;
 
-		HttpProperties httpProps = (HttpProperties) fProps;
-		int maxRequestThreads = httpProps.getMaxConnections();
-		if (maxRequestThreads > 0) {
-            threadPool.setMaxThreads(maxRequestThreads);
+		if ((ADK.debug & ADK.DBG_TRANSPORT) != 0 && log.isInfoEnabled()) {
 
-			int minRequestThreads = httpProps.getMinConnections();
-			if (minRequestThreads <= 0) {
-				minRequestThreads = (int) Math.ceil(maxRequestThreads / 5);
-			}
-			if(minRequestThreads <= 0 ) {
-				minRequestThreads = 1;
-			}
-            threadPool.setMinThreads(minRequestThreads);
-
-			int maxIdleTimeMs = httpProps.getMaxIdleTimeMs();
-			if (maxIdleTimeMs > 0) {
-                threadPool.setMaxIdleTimeMs(maxIdleTimeMs);
-			}
-			int lowResourcesPersistTimeMs = httpProps
-					.getLowResourcesPersistTimeMs();
-			if (lowResourcesPersistTimeMs > 0) {
-                listener.setLowResourcesMaxIdleTime(lowResourcesPersistTimeMs);
+			if ( ks == null ) {
+				log.info( "Using default Java keystore" );
+			} else {
+				log.info( "Using keystore: " + ks );
 			}
 
-            listener.setThreadPool(threadPool);
+			if ( ksPwd.equals( "changeit" ) ) {
+				log.info( "Using default Java keystore password 'changeit'" );
+			}
 
-			if ((ADK.debug & ADK.DBG_TRANSPORT) != 0 && log.isDebugEnabled()) {
-				log.debug("Set HttpListener.maxThreads to "
-						+ String.valueOf(maxRequestThreads));
-				if (minRequestThreads > 0) {
-					log.debug("Set HttpListener.minThreads to "
-							+ String.valueOf(minRequestThreads));
-				}
-				if (maxIdleTimeMs > 0) {
-					log.debug("Set HttpListener.maxIdleTimeMs to "
-							+ String.valueOf(maxIdleTimeMs));
-				}
-				if (lowResourcesPersistTimeMs > 0) {
-					log.debug("Set HttpListener.lowResourcesPersistTimeMs to "
-							+ String.valueOf(lowResourcesPersistTimeMs));
-				}
+			if (fProps instanceof HttpsProperties) {
+				log.info("Requiring client authentication: "
+						+ (((HttpsProperties) fProps)
+						.getRequireClientAuth() ? "yes"
+						: "no"));
 			}
 		}
+
+		SslContextFactory sslContext = new SslContextFactory();
+		sslContext.setWantClientAuth( true  );
+		sslContext.setRenegotiationAllowed( true );
+
+		//Use included protocols
+		String protos = fProps.getProperty( "protocols" );
+		if( protos != null && !protos.isEmpty() ) {
+			log.info( "Setting SSL protocols to " + protos );
+			sslContext.setIncludeProtocols( protos.split( "," ) );
+		}
+
+		if (ks != null) {
+			sslContext.setKeyStorePath(ks);
+			System.setProperty("javax.net.ssl.keyStore", ks);
+			System.setProperty("javax.net.ssl.keyStorePassword", ksPwd);
+		}
+
+		sslContext.setKeyManagerPassword(ksPwd);
+		String pwd = getPassword();
+		sslContext.setKeyStorePassword( pwd == null ? ksPwd : pwd);
+
+		boolean requireClientAuth = httpsProps.getRequireClientAuth();
+		log.info( "Require Client Auth: " + (requireClientAuth ? "Yes" : "no") );
+		sslContext.setNeedClientAuth( requireClientAuth );
+
+		String certAlias = httpsProps.getCertAlias();
+		if (certAlias != null && !certAlias.isEmpty()) {
+			log.info( "Using certificate alias: " + certAlias );
+			sslContext.setCertAlias( certAlias );
+		}
+
+		String ts = httpsProps.getTrustStore();
+		String tsPwd = httpsProps.getTrustStorePassword();
+		if (tsPwd == null)
+			tsPwd = "changeit";
+
+		if (ts != null) {
+			File tsFile = new File(ts);
+			if (!tsFile.exists())
+				throw new ADKTransportException(
+						"Truststore file not found: "
+								+ tsFile.getAbsolutePath(), zone);
+			log.info("(HttpTransport) Using truststore: "
+					+ tsFile.getAbsolutePath());
+			System.setProperty("javax.net.ssl.trustStore", ts);
+			System.setProperty("javax.net.ssl.trustStorePassword",
+					tsPwd);
+		} else {
+			log.info("Using default Java truststore");
+		}
+		// The following property tells the SunJsseListener to
+		// use a seperate truststore from the keystore. Note that if
+		// the truststore file is set above, it will be used, rather
+		// than the 'default' java truststore
+		//https.setUseDefaultTrustStore(true);
+
+		//Only allow specific cipher suites (if enabled)
+		String allowedCiphers = fProps.getProperty( "ciphers" );
+		if( allowedCiphers != null && allowedCiphers.length() > 0 ) {
+			log.debug( "Setting the set of allowed ciphers to " + allowedCiphers );
+			sslContext.setIncludeCipherSuites(  allowedCiphers.split( "," ) );
+
+			for( String cipher: sslContext.getIncludeCipherSuites() ) {
+				log.debug( cipher + " is enabled for this session." );
+			}
+		}
+
+		return new SslConnectionFactory(sslContext,HttpVersion.HTTP_1_1.asString());
 	}
 
 	/**
@@ -675,7 +650,7 @@ public class HttpTransport extends TransportImpl {
 	 * Determines if this transport is secure or not
 	 */
 	public boolean isSecure() {
-		return getProtocol().equalsIgnoreCase( "https");
+		return getProtocol().equalsIgnoreCase( "https" );
 	}
 
 	/**
